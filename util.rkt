@@ -42,3 +42,13 @@
   (match (read-char)
     [(or #\n #\N) #f]
     [else #t]))
+
+(define/contract (replace-in-file! path pat replacement)
+  (path-to-existant-file? (or/c string? regexp?) string? . -> . void?)
+
+  (define contents (file->string path))
+  (define contents/replaced
+    (regexp-replace pat contents replacement))
+  (with-output-to-file path
+    #:exists 'truncate
+    (thunk (displayln contents/replaced))))
