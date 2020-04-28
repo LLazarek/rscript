@@ -52,3 +52,10 @@
   (with-output-to-file path
     #:exists 'truncate
     (thunk (displayln contents/replaced))))
+
+(define (system/string cmd)
+  (call-with-output-string
+   (λ (out)
+     (parameterize ([current-output-port out]
+                    [current-error-port out])
+       (system cmd)))))
