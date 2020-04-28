@@ -36,7 +36,7 @@
   (and/c path-string? file-exists?))
 
 
-(define (user-prompt! msg [type 'y/n])
+(define (user-prompt! msg [type 'Y/n])
   (display @~a{@msg [Y/n]: })
   (flush-output)
   (match (read-char)
