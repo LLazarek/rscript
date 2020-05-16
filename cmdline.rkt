@@ -333,4 +333,31 @@
                              'not-f #t)
                        '("1" "2")))
     (test-exn exn:fail?
-              (parse '("-F" "-N" "1" "2")))))
+              (parse '("-F" "-N" "1" "2"))))
+
+  (test-begin
+    #:name help-text-clauses
+    (ignore (define (parse args)
+              (command-line/declarative
+               #:argv args
+               #:usage-help
+               "this"
+               "is"
+               "usage"
+               "text"
+               #:once-each
+               [("-F" "--only-f")
+                'only-f
+                ("Only do F's"
+                 (number->string (+ 2 2)))
+                #:record]
+               #:ps
+               "this"
+               "is"
+               "a ps")))
+    (test-equal? (parse '("-F"))
+                 (cons (hash 'only-f #t)
+                       '()))
+    (test-equal? (parse '())
+                 (cons (hash 'only-f #f)
+                       '()))))
