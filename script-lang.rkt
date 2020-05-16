@@ -24,11 +24,11 @@
   #:with [def ...] (map replace-srcloc defs)
   (begin def ...))
 
-(define-simple-macro (main #:arguments {[flags-name:id args-name:id] cmdline-e ...}
+(define-simple-macro (main #:arguments {[flags-pat args-pat] cmdline-e ...}
                            {~seq #:check [check:expr msg:expr]} ...
                            . body)
   (module+ main
-    (match-define (cons flags-name args-name)
+    (match-define (cons flags-pat args-pat)
       (command-line/declarative cmdline-e ...))
     (unless check (raise-user-error msg)) ...
     . body))
