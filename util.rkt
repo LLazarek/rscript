@@ -11,9 +11,15 @@
                                     (simple-form-path path))))
 
 (define (basename p #:with-directory? [dir? #f])
-  (define-values {dir name _2} (split-path p))
-  (define name-str (path->string name))
-  (define dir-str (path->string dir))
+  (define-values {dir-path name-path}
+    (match (explode-path (simple-form-path p))
+      [(list name)
+       (values (current-directory)
+               name)]
+      [(list _ ... parent name)
+       (values parent name)]))
+  (define dir-str (path->string dir-path))
+  (define name-str (path->string name-path))
   (if dir?
       (values dir-str name-str)
       name-str))
