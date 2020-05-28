@@ -45,9 +45,13 @@
 (define (user-prompt! msg [type 'Y/n])
   (display @~a{@msg [Y/n]: })
   (flush-output)
-  (match (read-char)
-    [(or #\n #\N) #f]
-    [else #t]))
+  (match (string-downcase (read-line))
+    [(or "" (regexp #rx"^y"))
+     (displayln "You answered yes")
+     #t]
+    [else
+     (displayln "You answered no")
+     #f]))
 
 (define/contract (replace-in-file! path pat replacement)
   (path-to-existant-file? (or/c string? regexp?) string? . -> . void?)
