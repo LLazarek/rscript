@@ -16,8 +16,8 @@
       [(list name)
        (values (current-directory)
                name)]
-      [(list _ ... parent name)
-       (values parent name)]))
+      [(list parent-path-parts ... name)
+       (values (apply build-path parent-path-parts) name)]))
   (define dir-str (path->string dir-path))
   (define name-str (path->string name-path))
   (if dir?
