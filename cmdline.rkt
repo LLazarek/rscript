@@ -2,7 +2,8 @@
 
 (provide command-line/declarative
          take-latest
-         snoc)
+         snoc
+         set-parameter)
 
 (require syntax/parse/define
          racket/cmdline
@@ -56,7 +57,7 @@
 (define (make-collector combine init)
   (accumulator init
                init
-               (λ (new acc) (combine new acc))))
+               combine))
 
 (define/match (collect-flags flag-accum state)
   [{'() state} state]
@@ -200,6 +201,8 @@
 (define (take-latest new old) new)
 (define (snoc el l)
   (append l (list el)))
+(define (set-parameter p [transform values])
+  (λ (new _) (p (transform new))))
 
 (module+ test
   (require ruinit
