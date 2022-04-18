@@ -41,18 +41,6 @@
 (define path-to-existant-file?
   (and/c path-string? file-exists?))
 
-
-(define (user-prompt! msg [type 'Y/n])
-  (display @~a{@msg [Y/n]: })
-  (flush-output)
-  (match (string-downcase (read-line))
-    [(or "" (regexp #rx"^y"))
-     (displayln "You answered yes")
-     #t]
-    [else
-     (displayln "You answered no")
-     #f]))
-
 (define/contract (replace-in-file! path pat replacement)
   (path-to-existant-file? (or/c string? regexp?) string? . -> . void?)
 
@@ -63,9 +51,71 @@
     #:exists 'truncate
     (thunk (displayln contents/replaced))))
 
-(define (system/string cmd)
-  (call-with-output-string
-   (λ (out)
-     (parameterize ([current-output-port out]
-                    [current-error-port out])
-       (system cmd)))))
+(define (with-output-to-string* thunk)
+  (define results (box #f))
+  (values (with-output-to-string
+            (λ _ (call-with-values thunk (λ vals (set-box! results vals)))))
+          (unbox results)))
+(define (system/string cmd #:with-exit? [with-exit? #f])
+  (match-define-values {output (list ok?)}
+                       (with-output-to-string* (thunk (system cmd))))
+  (if with-exit?
+      (values output ok?)
+      output))
+(define (system*/string #:with-exit? [with-exit? #f]
+                        . cmd-parts)
+  (match-define-values {output (list ok?)}
+                       (with-output-to-string* (thunk (apply system* cmd-parts))))
+  (if with-exit?
+      (values output ok?)
+      output))
+
+(define (read-user-input-line! msg)
+  (display (~a msg " "))
+  (flush-output)
+  (string-trim (read-line)))
+
+(define (user-prompt!* msg
+                       raw-options
+                       [none-result 'none]
+                       #:retry-on-none? [retry-on-none? #t])
+  (define options (map (compose1 string-downcase ~a) raw-options))
+  (define answer
+    (string-trim
+     (string-downcase
+      (read-user-input-line!
+       @~a{@msg [@(string-upcase (first options))/@(string-join (rest options) "/")]: }))))
+  (or (and (string=? answer "") (first raw-options))
+      (for/first ([raw-option (in-list raw-options)]
+                  [option-str (in-list options)]
+                  #:when (string=? answer option-str))
+        raw-option)
+      (if retry-on-none?
+          (user-prompt!* msg
+                         raw-options
+                         none-result
+                         #:retry-on-none? #t)
+          none-result)))
+
+(define (user-prompt! msg)
+  (match (user-prompt!* msg '(y n))
+    ['y
+     (displayln "You answered yes")
+     #t]
+    [else
+     (displayln "You answered no")
+     #f]))
+
+(define system-temp-dir (find-system-path 'temp-dir))
+;; Call f with a new temp directory.
+;; Delete the directory after f returns.
+;; Result is whatever f produces.
+(define (call-with-temp-directory f
+                                  #:name-seed [seed "sc"]
+                                  #:name [name (~a seed (current-milliseconds))])
+  (define temp-dir (build-path system-temp-dir name))
+  (dynamic-wind
+    (thunk (make-directory temp-dir))
+    (thunk (f temp-dir))
+    (thunk (delete-directory/files temp-dir))))
+
