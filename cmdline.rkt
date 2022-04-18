@@ -160,8 +160,12 @@
                              help-str:str ...}}
                  ...
                  {~optional {~seq #:args {~or* (pos-arg:id ...)
+                                               (pos-arg:id ...+ . pos-arg-rest:id)
                                                pos-arg-rest:id}}})
-  #:with [pos-arg-inferred-name ...] #'{~? (pos-arg ...) {~? (pos-arg-rest) ()}}
+  #:with [pos-arg-inferred-name ...] #'{~? (pos-arg ... pos-arg-rest)
+                                           {~? (pos-arg ...)
+                                               {~? (pos-arg-rest)
+                                                   ()}}}
   #:with flag-init-hash #'(hash {~@ spec.name
                                     (make-collector spec.collector-function
                                                     spec.init-value)}
@@ -182,9 +186,10 @@
    {~@ kw [spec.flags => spec.handler (list spec.help-msgs {~? spec.arg-name})] ...}
    ...
    #:handlers
-   (λ {~? (flag-accum pos-arg ...)
-          {~? (flag-accum . pos-arg-rest)
-              (flag-accum)}}
+   (λ {~? (flag-accum pos-arg ... . pos-arg-rest)
+          {~? (flag-accum pos-arg ...)
+              {~? (flag-accum . pos-arg-rest)
+                  (flag-accum)}}}
      (define flags-hash
        (collect-flags flag-accum
                       flag-init-hash))
@@ -193,9 +198,10 @@
                        (hash {~@ mandatory-arg (λ _ #f)} ...
                              {~@ maybe-mandatory-arg test} ...))
      (cons (strip-accumulators flags-hash)
-           {~? (list pos-arg ...)
-               {~? pos-arg-rest
-                   '()}}))
+           {~? (list* pos-arg ... pos-arg-rest)
+               {~? (list pos-arg ...)
+                   {~? pos-arg-rest
+                       '()}}}))
    (map symbol->string '(pos-arg-inferred-name ...))))
 
 (define (take-latest new old) new)
@@ -363,4 +369,14 @@
                        '()))
     (test-equal? (parse '())
                  (cons (hash 'only-f #f)
-                       '()))))
+                       '())))
+
+  (test-begin
+    #:name pos-args
+    (ignore (define (parse args)
+              (command-line/declarative
+               #:argv args
+               #:args (arg1 arg2 . more-args))))
+    (test-equal? (parse '("1" "2" "3" "4"))
+                 (cons (hash)
+                       '("1" "2" "3" "4")))))
