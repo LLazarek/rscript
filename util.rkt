@@ -119,3 +119,35 @@
     (thunk (f temp-dir))
     (thunk (delete-directory/files temp-dir))))
 
+(define (file-name-string-from-path f)
+  (define-values {_1 name _2} (split-path f))
+  (path->string name))
+
+(define ((path-ends-with name) p)
+  (define p-name (file-name-string-from-path p))
+  (string=? p-name name))
+
+(define (pick-file-by-name files name #:key [key values])
+  (findf (compose1 (path-ends-with name) key) files))
+
+(define (file-or-directory-checksum path)
+  (match (string-split
+          (call-with-output-string
+           (λ (str-out)
+             (if (path-to-existant-file? path)
+                 (parameterize ([current-output-port str-out])
+                   (system @~a{md5sum @path}))
+                 (parameterize ([current-output-port str-out]
+                                [current-directory path])
+                   (system
+                    @~a{
+                        find . -type f -exec md5sum '{}' ';' @;
+                        | sort -k 2 @;
+                        | md5sum
+                        }))))))
+    [(list* sum _) sum]
+    [else #f]))
+
+(define (path-replace-filename p new-name)
+  (define-values {parent name _2} (split-path (simple-form-path p)))
+  (build-path parent new-name))
