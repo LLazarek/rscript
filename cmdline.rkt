@@ -43,21 +43,24 @@
    #:args (positional-1 positional-2))
 
 
-(struct accumulator (current init combine)
+(struct accumulator (current init combine updated?)
   #:transparent
+  #:auto-value #f
   #:property
   prop:procedure
   (λ (self new-val)
-    (match-define (accumulator current init combine) self)
+    (match-define (accumulator current init combine _) self)
     (accumulator (combine new-val current)
                  init
-                 combine)))
+                 combine
+                 #t)))
 
 (define (record _1 _2) #t)
 (define (make-collector combine init)
   (accumulator init
                init
-               combine))
+               combine
+               #f))
 
 (define/match (collect-flags flag-accum state)
   [{'() state} state]
@@ -68,10 +71,11 @@
 
 (define (specified-in? collected-flags flag)
   (match collected-flags
-    [(hash-table [(== flag) (accumulator current init _)] _ ...)
-     (not (equal? current init))]
+    [(hash-table [(== flag) (accumulator current init _ supplied?)] _ ...)
+     supplied?]
     [else #f]))
 
+(require racket/pretty)
 (define (check-conflicts! collected-flags conflict-hash mandatory-args)
   (for ([(k conflicts) (in-hash conflict-hash)]
         #:when (specified-in? collected-flags k)
@@ -99,7 +103,6 @@
     (values k (accumulator-current acc))))
 
 
-
 (begin-for-syntax
   (require syntax/parse
            racket/list)
@@ -125,17 +128,7 @@
                                                 collector:expr
                                                 init:expr]}}}
                   {~optional {~seq #:conflicts conflicts:expr}}}
-                 ...
-
-                 ;; {~optional {~and mandatory-kw #:mandatory}}
-                 ;; {~optional {~seq #:mandatory-unless
-                 ;;                  mandatory-unless-pred:expr}}
-                 ;; {~or* {~and record-kw #:record}
-                 ;;       {~seq #:collect [arg-name:expr
-                 ;;                        collector:expr
-                 ;;                        init:expr]}}
-                 ;; {~optional {~seq #:conflicts conflicts:expr}}
-                 ]
+                 ...]
      #:with handler #`(let ([flag-name name])
                         (λ (_ #,@(if (attribute collector) #'(arg) #'()))
                           #,(cond [(attribute record-kw)
@@ -301,7 +294,40 @@
                  (cons (hash 'A #t
                              'thing '("1")
                              'only-f #t)
-                       '())))
+                       '()))
+
+    (ignore (define (parse2 args)
+              (command-line/declarative
+               #:argv args
+               #:once-each
+               [("-c" "--config")
+                'config
+                "Config from which to obtain active mutator names."
+                #:collect ["path" take-latest #f]
+                #:mandatory]
+               [("-o" "--outfile")
+                'outfile
+                ("Filename to output plot table."
+                 "Default: <plot-type>.png (see -t/--type)")
+                #:collect ["path" take-latest #f]]
+               [("-t" "--type")
+                'plot-type
+                ("Which type of plot to produce for the data. Options below; default is attrition."
+                 "  attrition : plot the count of mutants produced by each mutator, broken down by 1) the total count, 2) of those, the ones that produce type errors, and 3) of those, the ones that produce dynamic errors")
+                #:collect {"type" take-latest "attrition"}
+                #:mandatory]
+               [("-d" "--dyn-err-summaries-db")
+                'dyn-err-summaries-db
+                ("Read data about dynamic errors from the given summaries db.")
+                #:collect ["path" take-latest #f]
+                #:mandatory]
+               #:args log-files)))
+    (test-equal? (parse2 '("-c" "a-path" "-t" "attrition" "-o" "temp.png" "-d" "a-db.rktdb" "acquire-debug.log" "take5-dbeug.log"))
+                 (cons (hash 'config "a-path"
+                             'outfile "temp.png"
+                             'plot-type "attrition"
+                             'dyn-err-summaries-db "a-db.rktdb")
+                       '("acquire-debug.log" "take5-dbeug.log"))))
 
   (test-begin
     #:name conflicts
