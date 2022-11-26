@@ -2,6 +2,8 @@
 
 (provide (all-defined-out))
 
+(require syntax/parse/define)
+
 (define (build-path-string . args)
   (path->string (apply build-path args)))
 (define (simple-form-path-string p)
@@ -78,13 +80,14 @@
 (define (user-prompt!* msg
                        raw-options
                        [none-result 'none]
-                       #:retry-on-none? [retry-on-none? #t])
-  (define options (map (compose1 string-downcase ~a) raw-options))
+                       #:retry-on-none? [retry-on-none? #t]
+                       #:normalize [normalize string-downcase])
+  (define options (map (compose1 normalize ~a) raw-options))
   (define answer
     (string-trim
-     (string-downcase
+     (normalize
       (read-user-input-line!
-       @~a{@msg [@(string-upcase (first options))/@(string-join (rest options) "/")]: }))))
+       @~a{@msg [{@(first options)}/@(string-join (rest options) "/")]: }))))
   (or (and (string=? answer "") (first raw-options))
       (for/first ([raw-option (in-list raw-options)]
                   [option-str (in-list options)]
@@ -105,6 +108,23 @@
     [else
      (displayln "You answered no")
      #f]))
+
+(define-simple-macro (user-prompt*!/dispatch {~optional lead-msg}
+                                             {~alt {~once [default-key
+                                                            #:default
+                                                            default-description
+                                                            default-action ...]}
+                                                   [key
+                                                    description
+                                                    action ...]} ...)
+  (match (user-prompt!* @~a{
+                            @(string-append {~? {~@ lead-msg "\n"}})@;
+                            @default-key or empty : @default-description
+                            @string-join[(list @~a{@key : @description} ...) "\n"]
+                            })
+    [default-key default-action ...]
+    [key action ...]
+    ...))
 
 (define system-temp-dir (find-system-path 'temp-dir))
 ;; Call f with a new temp directory.
