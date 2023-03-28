@@ -121,7 +121,8 @@
                             @(string-append {~? {~@ lead-msg "\n"}})@;
                             @default-key or empty : @default-description
                             @string-join[(list @~a{@key : @description} ...) "\n"]
-                            })
+                            }
+                        '(default-key key ...))
     [default-key default-action ...]
     [key action ...]
     ...))
