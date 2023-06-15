@@ -133,8 +133,9 @@
 ;; Result is whatever f produces.
 (define (call-with-temp-directory f
                                   #:name-seed [seed "sc"]
-                                  #:name [name (~a seed (current-milliseconds))])
-  (define temp-dir (build-path system-temp-dir name))
+                                  #:name [name (~a seed (current-milliseconds))]
+                                  #:in [parent system-temp-dir])
+  (define temp-dir (build-path parent name))
   (dynamic-wind
     (thunk (make-directory temp-dir))
     (thunk (f temp-dir))
@@ -172,3 +173,8 @@
 (define (path-replace-filename p new-name)
   (define-values {parent name _2} (split-path (simple-form-path p)))
   (build-path parent new-name))
+
+(define (pretty-path p)
+  (find-relative-path (simple-form-path (current-directory))
+                      (simple-form-path p)))
+
