@@ -31,5 +31,7 @@
     (match-define (cons flags-pat args-pat)
       (command-line/declarative cmdline-e ...))
     (unless check (raise-user-error msg)) ...
+    (file-stream-buffer-mode (current-output-port) 'line)
+    (file-stream-buffer-mode (current-error-port) 'none)
     . body))
 
