@@ -178,3 +178,26 @@
   (find-relative-path (simple-form-path (current-directory))
                       (simple-form-path p)))
 
+;; output-port? output-port? -> output-port?
+;; Create an output port for which all writes will be copied to both `p1` and `p2`.
+(define (tee-output-port p1 p2)
+  (make-output-port
+   (object-name p1)
+   p1
+   (lambda (bstr start end non-block? enable-break?)
+     (cond
+       [(= start end)
+        (flush-output p1)
+        0]
+       [else
+        (define n (write-bytes-avail* bstr p1 start end))
+        (cond
+          [(or (not n)
+               (zero? n))
+           (wrap-evt p1 (lambda (v) 0))]
+          [else
+           (write-bytes bstr p2 start (+ start n))
+           n])]))
+   (lambda ()
+     (close-output-port p1)
+     (close-output-port p2))))
