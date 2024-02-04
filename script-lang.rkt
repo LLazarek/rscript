@@ -1,17 +1,19 @@
-#lang racket
+#lang racket/base
 
-(provide (all-from-out racket)
-         (all-from-out racket/runtime-path)
+(provide (all-from-out racket/runtime-path)
+         (all-from-out racket/base)
          define-runtime-paths
          main
          (all-from-out "util.rkt")
          (all-from-out "cmdline.rkt"))
 
 (require racket/runtime-path
+         racket/match
          "cmdline.rkt"
          syntax/parse/define
          "util.rkt"
-         (for-syntax racket/syntax))
+         (for-syntax racket/syntax
+                     racket/base))
 
 (define-simple-macro (define-runtime-paths [name:id path:expr] ...)
   ;; Ugly dance to get the srcloc on the `define-runtime-path` exprs to be the

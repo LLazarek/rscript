@@ -1,8 +1,19 @@
-#lang at-exp racket
+#lang at-exp racket/base
 
 (provide (all-defined-out))
 
-(require syntax/parse/define)
+(require racket/contract/base
+         racket/contract/region
+         racket/file
+         racket/format
+         racket/function
+         racket/list
+         racket/match
+         racket/path
+         racket/port
+         racket/string
+         racket/system
+         syntax/parse/define)
 
 (define (build-path-string . args)
   (path->string (apply build-path args)))
