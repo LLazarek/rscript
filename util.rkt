@@ -13,7 +13,9 @@
          racket/port
          racket/string
          racket/system
-         syntax/parse/define)
+         syntax/parse/define
+         (for-syntax racket/base
+                     syntax/parse))
 
 (define (build-path-string . args)
   (path->string (apply build-path args)))
